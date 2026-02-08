@@ -1,0 +1,20 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY pyproject.toml README.md ./
+RUN pip install --no-cache-dir ".[dagster]"
+
+# Pre-download embedding model
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+
+COPY src/ ./src/
+COPY data/raw/ ./data/raw/
+COPY docker/dagster_workspace.yaml ./docker/dagster_workspace.yaml
+
+ENV PYTHONPATH=/app/src
+ENV DAGSTER_HOME=/app/src

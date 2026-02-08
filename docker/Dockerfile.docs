@@ -1,0 +1,12 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY pyproject.toml README.md ./
+RUN pip install --no-cache-dir ".[docs]"
+
+COPY docs/ ./docs/
+
+EXPOSE 8080
+
+CMD ["mkdocs", "serve", "-f", "docs/mkdocs.yml", "--dev-addr=0.0.0.0:8080"]

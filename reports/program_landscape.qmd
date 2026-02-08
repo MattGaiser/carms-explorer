@@ -1,0 +1,230 @@
+---
+title: "CaRMS Program Landscape Analysis"
+author: "CaRMS Program Explorer"
+format:
+  html:
+    theme: cosmo
+    code-fold: true
+    toc: true
+    toc-depth: 3
+    embed-resources: true
+execute:
+  echo: true
+  warning: false
+jupyter: python3
+---
+
+## Setup
+
+Connect to the CaRMS PostgreSQL database and load core data.
+
+```{python}
+import os
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from sqlalchemy import create_engine, text
+
+DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://carms:carms@localhost:5432/carms")
+engine = create_engine(DATABASE_URL)
+
+def query(sql):
+    with engine.connect() as conn:
+        return pd.read_sql(text(sql), conn)
+
+programs = query("""
+    SELECT p.id, p.name, p.site, p.stream, p.url,
+           d.name AS discipline, s.name AS school
+    FROM programs p
+    JOIN disciplines d ON p.discipline_id = d.id
+    JOIN schools s ON p.school_id = s.id
+""")
+
+print(f"Loaded {len(programs)} programs across {programs['discipline'].nunique()} disciplines and {programs['school'].nunique()} schools")
+```
+
+## Discipline Distribution
+
+### Programs per Discipline
+
+```{python}
+disc_counts = programs.groupby("discipline").size().reset_index(name="programs")
+disc_counts = disc_counts.sort_values("programs", ascending=False)
+
+fig = px.bar(
+    disc_counts, x="programs", y="discipline", orientation="h",
+    title="Programs per Discipline",
+    color="programs", color_continuous_scale="Blues",
+)
+fig.update_layout(yaxis={"categoryorder": "total ascending"}, height=800)
+fig.show()
+```
+
+### CMG vs IMG Stream Breakdown
+
+```{python}
+programs["is_cmg"] = programs["stream"].str.contains("CMG", case=False, na=False)
+programs["is_img"] = programs["stream"].str.contains("IMG", case=False, na=False)
+
+stream_by_disc = programs.groupby("discipline").agg(
+    cmg=("is_cmg", "sum"),
+    img=("is_img", "sum"),
+).reset_index().sort_values("cmg", ascending=False)
+
+fig = go.Figure()
+fig.add_trace(go.Bar(name="CMG", x=stream_by_disc["discipline"], y=stream_by_disc["cmg"]))
+fig.add_trace(go.Bar(name="IMG", x=stream_by_disc["discipline"], y=stream_by_disc["img"]))
+fig.update_layout(
+    barmode="group", title="CMG vs IMG Programs by Discipline",
+    xaxis_tickangle=-45, height=500,
+)
+fig.show()
+```
+
+## Geographic Accessibility
+
+### Training Site Distribution
+
+```{python}
+site_counts = programs.groupby("site").size().reset_index(name="programs")
+site_counts = site_counts.sort_values("programs", ascending=False)
+
+fig = px.treemap(
+    site_counts, path=["site"], values="programs",
+    title="Program Distribution by Training Site",
+    color="programs", color_continuous_scale="Teal",
+)
+fig.update_layout(height=600)
+fig.show()
+```
+
+### School x Discipline Heatmap
+
+```{python}
+pivot = pd.pivot_table(
+    programs, values="id", index="school", columns="discipline",
+    aggfunc="count", fill_value=0,
+)
+
+fig = px.imshow(
+    pivot, title="School × Discipline Coverage Heatmap",
+    color_continuous_scale="YlOrRd", aspect="auto",
+)
+fig.update_layout(height=600, xaxis_tickangle=-45)
+fig.show()
+```
+
+## Stream Availability
+
+### CMG vs IMG Crosstab
+
+```{python}
+stream_type = programs.copy()
+stream_type["stream_label"] = stream_type["stream"].apply(
+    lambda s: "CMG" if "CMG" in str(s).upper() else ("IMG" if "IMG" in str(s).upper() else "Other")
+)
+
+ct = pd.crosstab(stream_type["discipline"], stream_type["stream_label"])
+print(ct.to_string())
+```
+
+### Disciplines Without IMG Stream
+
+```{python}
+if "IMG" in ct.columns:
+    no_img = ct[ct["IMG"] == 0].index.tolist()
+    if no_img:
+        print(f"Disciplines with no IMG stream ({len(no_img)}):")
+        for d in no_img:
+            print(f"  - {d}")
+    else:
+        print("All disciplines have at least one IMG stream.")
+else:
+    print("No IMG stream column found in the data.")
+```
+
+## Description Text Analysis
+
+```{python}
+descriptions = query("""
+    SELECT pd.program_id,
+           pd.program_name_section, pd.match_iteration_name, pd.program_contacts,
+           pd.general_instructions, pd.supporting_documentation_information,
+           pd.review_process, pd.interviews, pd.selection_criteria,
+           pd.program_highlights, pd.program_curriculum, pd.training_sites,
+           pd.additional_information, pd.return_of_service, pd.faq,
+           pd.summary_of_changes, pd.full_markdown
+    FROM program_descriptions pd
+""")
+
+section_cols = [
+    "program_name_section", "match_iteration_name", "program_contacts",
+    "general_instructions", "supporting_documentation_information",
+    "review_process", "interviews", "selection_criteria",
+    "program_highlights", "program_curriculum", "training_sites",
+    "additional_information", "return_of_service", "faq", "summary_of_changes",
+]
+
+# Section completeness
+descriptions["sections_filled"] = descriptions[section_cols].notna().sum(axis=1)
+
+print(f"Descriptions loaded: {len(descriptions)}")
+print(f"\nSections filled statistics:")
+print(descriptions["sections_filled"].describe().round(1))
+```
+
+### Section Completeness by Section
+
+```{python}
+fill_rates = descriptions[section_cols].notna().mean().sort_values(ascending=False) * 100
+fill_df = fill_rates.reset_index()
+fill_df.columns = ["section", "fill_rate_pct"]
+
+fig = px.bar(
+    fill_df, x="fill_rate_pct", y="section", orientation="h",
+    title="Section Fill Rate (%)", color="fill_rate_pct",
+    color_continuous_scale="Greens",
+)
+fig.update_layout(yaxis={"categoryorder": "total ascending"}, height=500)
+fig.show()
+```
+
+### Markdown Length Distribution
+
+```{python}
+md_lengths = descriptions["full_markdown"].dropna().str.len()
+
+fig = px.histogram(
+    x=md_lengths, nbins=50,
+    title="Distribution of Program Description Length (characters)",
+    labels={"x": "Character Count", "y": "Number of Programs"},
+)
+fig.show()
+
+print(f"\nMarkdown length statistics:")
+print(md_lengths.describe().round(0))
+```
+
+## Summary Findings
+
+```{python}
+total_programs = len(programs)
+total_disciplines = programs["discipline"].nunique()
+total_schools = programs["school"].nunique()
+total_sites = programs["site"].nunique()
+total_descriptions = len(descriptions)
+avg_sections = descriptions["sections_filled"].mean()
+
+print(f"""
+CaRMS Program Landscape Summary
+================================
+Total Programs:      {total_programs}
+Disciplines:         {total_disciplines}
+Medical Schools:     {total_schools}
+Training Sites:      {total_sites}
+Descriptions:        {total_descriptions}
+Avg Sections Filled: {avg_sections:.1f} / {len(section_cols)}
+
+Coverage: {total_descriptions / total_programs * 100:.1f}% of programs have descriptions.
+""")
+```

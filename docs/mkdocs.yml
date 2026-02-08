@@ -1,0 +1,39 @@
+site_name: CaRMS Program Explorer
+site_description: AI-powered Canadian medical residency program discovery platform
+site_dir: ../site
+
+theme:
+  name: material
+  palette:
+    primary: blue
+    accent: light blue
+  features:
+    - navigation.sections
+    - navigation.expand
+    - content.code.copy
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - Data Model: data-model.md
+  - ETL Pipeline: etl-pipeline.md
+  - API Reference: api-reference.md
+  - Semantic Search: semantic-search.md
+  - AI Agent: agent.md
+  - Data Warehouse: data-warehouse.md
+  - Program Landscape: program-landscape.md
+  - Deployment: deployment.md

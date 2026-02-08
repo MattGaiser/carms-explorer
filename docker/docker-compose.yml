@@ -1,0 +1,101 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: carms
+      POSTGRES_PASSWORD: carms
+      POSTGRES_DB: carms
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U carms"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.app
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://carms:carms@postgres:5432/carms
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      DATA_DIR: data/raw
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  dagster_code:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dagster
+    command: dagster api grpc -h 0.0.0.0 -p 4000 -m carms.etl.definitions
+    environment:
+      DATABASE_URL: postgresql://carms:carms@postgres:5432/carms
+      DAGSTER_PG_HOST: postgres
+      DAGSTER_PG_PORT: "5432"
+      DAGSTER_PG_USER: carms
+      DAGSTER_PG_PASSWORD: carms
+      DAGSTER_PG_DB: dagster
+      DATA_DIR: data/raw
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  dagster_webserver:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dagster
+    command: dagster-webserver -h 0.0.0.0 -p 3000 -w docker/dagster_workspace.yaml
+    ports:
+      - "3000:3000"
+    environment:
+      DAGSTER_PG_HOST: postgres
+      DAGSTER_PG_PORT: "5432"
+      DAGSTER_PG_USER: carms
+      DAGSTER_PG_PASSWORD: carms
+      DAGSTER_PG_DB: dagster
+    depends_on:
+      - dagster_code
+
+  dagster_daemon:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dagster
+    command: dagster-daemon run -w docker/dagster_workspace.yaml
+    environment:
+      DAGSTER_PG_HOST: postgres
+      DAGSTER_PG_PORT: "5432"
+      DAGSTER_PG_USER: carms
+      DAGSTER_PG_PASSWORD: carms
+      DAGSTER_PG_DB: dagster
+    depends_on:
+      - dagster_code
+
+  dashboard:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      DATABASE_URL: postgresql://carms:carms@postgres:5432/carms
+      API_URL: http://app:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  docs:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.docs
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:

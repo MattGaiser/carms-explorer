@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CaRMS Program Explorer</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="app">
+        <header>
+            <h1>CaRMS Program Explorer</h1>
+            <p class="subtitle">AI-powered Canadian medical residency program discovery</p>
+            <nav>
+                <a href="/docs" target="_blank">API Docs</a>
+                <a href="http://localhost:8501" target="_blank">Analytics Dashboard</a>
+            </nav>
+        </header>
+
+        <div id="agent-status" class="status-bar">
+            Checking AI agent status...
+        </div>
+
+        <div id="profile-bar" class="profile-bar" style="display:none;">
+            <span id="profile-filename"></span>
+            <span id="profile-summary"></span>
+            <button id="clear-profile-btn" class="clear-profile-btn" title="Remove profile">&#x2715;</button>
+        </div>
+
+        <main id="chat-container">
+            <div id="messages">
+                <div class="message assistant">
+                    <div class="message-content">
+                        <p>Welcome! I'm the CaRMS Program Explorer. I can help you discover residency programs across Canada.</p>
+                        <p>Try asking me things like:</p>
+                        <ul>
+                            <li>"Find family medicine programs in Ontario"</li>
+                            <li>"What programs focus on rural medicine?"</li>
+                            <li>"Compare anesthesiology programs at UBC and U of T"</li>
+                            <li>"Show me all disciplines available"</li>
+                        </ul>
+                        <p>You can also upload a PDF (CV, personal statement, or cover letter) using the paperclip button to get personalised program recommendations.</p>
+                    </div>
+                </div>
+            </div>
+
+            <form id="chat-form">
+                <div class="input-group">
+                    <input type="file" id="file-input" accept="application/pdf" style="display:none;">
+                    <label for="file-input" id="upload-btn" class="upload-btn" title="Upload PDF (CV, personal statement, cover letter)">&#x1F4CE;</label>
+                    <input type="text" id="user-input" placeholder="Ask about residency programs..." autocomplete="off" disabled>
+                    <button type="submit" id="send-btn" disabled>Send</button>
+                </div>
+                <div id="upload-status" class="upload-status"></div>
+            </form>
+        </main>
+    </div>
+
+    <script src="/static/chat.js"></script>
+</body>
+</html>

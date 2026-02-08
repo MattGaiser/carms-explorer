@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_call:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install ruff
+
+      - run: ruff check src/ tests/
+
+      - run: ruff format --check src/ tests/
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: carms
+          POSTGRES_PASSWORD: carms
+          POSTGRES_DB: carms_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U carms"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.cache/huggingface
+          key: ${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: pip install ".[api,dagster,agent,dev]"
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://carms:carms@localhost:5433/carms_test
+          TEST_DATABASE_URL: postgresql://carms:carms@localhost:5433/carms_test
+        run: pytest tests/ -v --cov=src/carms --cov-report=term-missing --cov-fail-under=70

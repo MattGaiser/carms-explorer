@@ -1,0 +1,107 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+# Only one deploy at a time
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  # Gate on CI passing
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  build-and-push:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        include:
+          - image: app
+            dockerfile: docker/Dockerfile.app
+          - image: dagster
+            dockerfile: docker/Dockerfile.dagster
+          - image: dashboard
+            dockerfile: docker/Dockerfile.dashboard
+          - image: docs
+            dockerfile: docker/Dockerfile.docs
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.image }}:latest
+            ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.image }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy files to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          source: "docker/docker-compose.prod.yml,docker/init-db.sql,docker/dagster_workspace.yaml"
+          target: /home/ec2-user/carms
+          strip_components: 1
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          IMAGE_TAG: ${{ github.sha }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          envs: GITHUB_REPOSITORY,IMAGE_TAG,POSTGRES_PASSWORD,ANTHROPIC_API_KEY
+          script: |
+            cd /home/ec2-user/carms
+
+            # Write .env for docker compose
+            printf 'GITHUB_REPOSITORY=%s\nIMAGE_TAG=%s\nPOSTGRES_PASSWORD=%s\nANTHROPIC_API_KEY=%s\n' \
+              "${GITHUB_REPOSITORY}" "${IMAGE_TAG}" "${POSTGRES_PASSWORD}" "${ANTHROPIC_API_KEY}" > .env
+
+            # Pull images (public GHCR repo — no login needed)
+            # For private repos, add GHCR_PAT secret and: echo "$GHCR_PAT" | docker login ghcr.io -u USERNAME --password-stdin
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d
+            docker image prune -f
+
+      - name: Health check
+        run: |
+          echo "Waiting for app to start..."
+          sleep 30
+          curl -f --retry 5 --retry-delay 10 http://${{ secrets.EC2_HOST }}:8000/health

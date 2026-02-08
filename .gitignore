@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Environment
+.env
+
+# Data (keep raw, ignore large generated)
+data/raw-repo/
+
+# Docker
+docker/postgres-data/
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate*
+terraform/.terraform.lock.hcl
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Dagster
+/tmp/
+storage/
+schedules/
+.dagster_home/
+
+# Claude
+.claude/
+
+# Playwright MCP
+.playwright-mcp/
+
+# Coverage
+.coverage
+htmlcov/
+
+# Screenshots / artifacts (keep in docs/docs/ only)
+*.png
+*.pdf
+
+# Pytest
+.pytest_cache/
+
+# Ruff
+.ruff_cache/
