@@ -39,6 +39,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Lowercase repo name
+        run: echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
       - uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -53,8 +56,8 @@ jobs:
           file: ${{ matrix.dockerfile }}
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.image }}:latest
-            ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.image }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.REPO_LC }}/${{ matrix.image }}:latest
+            ${{ env.REGISTRY }}/${{ env.REPO_LC }}/${{ matrix.image }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -90,9 +93,10 @@ jobs:
           script: |
             cd /home/ec2-user/carms
 
-            # Write .env for docker compose
+            # Write .env for docker compose (GHCR requires lowercase repo names)
+            REPO_LC=$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
             printf 'GITHUB_REPOSITORY=%s\nIMAGE_TAG=%s\nPOSTGRES_PASSWORD=%s\nANTHROPIC_API_KEY=%s\n' \
-              "${GITHUB_REPOSITORY}" "${IMAGE_TAG}" "${POSTGRES_PASSWORD}" "${ANTHROPIC_API_KEY}" > .env
+              "${REPO_LC}" "${IMAGE_TAG}" "${POSTGRES_PASSWORD}" "${ANTHROPIC_API_KEY}" > .env
 
             # Pull images (public GHCR repo — no login needed)
             # For private repos, add GHCR_PAT secret and: echo "$GHCR_PAT" | docker login ghcr.io -u USERNAME --password-stdin
