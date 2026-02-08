@@ -155,7 +155,7 @@ def test_chat_prepends_profile_context(client):
         # Make receive_response return an empty async iterator
         async def empty_iter():
             return
-            yield  # noqa: unreachable — makes this an async generator
+            yield  # noqa: F841 — makes this an async generator
 
         mock_client.receive_response = empty_iter
         mock_create.return_value = mock_client
@@ -172,6 +172,7 @@ def test_chat_prepends_profile_context(client):
 
     # Clean up
     from carms.agent.pdf_profile import clear_profile
+
     clear_profile("sess-with-profile")
 
 

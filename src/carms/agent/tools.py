@@ -18,7 +18,8 @@ def _get_session() -> Session:
 
 @tool(
     "search_programs",
-    "Semantic search over CaRMS residency program descriptions. Use this when a user describes what they're looking for in natural language.",
+    "Semantic search over CaRMS residency program descriptions."
+    " Use this when a user describes what they're looking for.",
     {"query": str, "top_k": int},
 )
 async def search_programs(args: dict[str, Any]) -> dict[str, Any]:

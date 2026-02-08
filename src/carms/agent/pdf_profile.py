@@ -42,12 +42,12 @@ Return **only** valid JSON (no markdown fences, no explanation) with these keys:
 
 {
   "is_relevant": true or false,
-  "document_type": "what kind of document this is, e.g. 'CV', 'personal statement', 'airline booking confirmation', 'invoice'",
+  "document_type": "what kind of document this is, e.g. 'CV', 'personal statement'",
   "disciplines_of_interest": ["medical specialties, rotations, or fields mentioned"],
   "geographic_preferences": ["provinces, cities, regions, or institutions mentioned"],
   "training_interests": ["specific training focuses mentioned, e.g. rural medicine, research"],
   "research_experience": "brief summary of any research mentioned, or null",
-  "clinical_experience": "brief summary of any clinical experience, rotations, or electives, or null",
+  "clinical_experience": "brief summary of clinical experience or rotations, or null",
   "education": "degrees, institutions, and years if mentioned, or null",
   "languages": ["languages mentioned or implied"],
   "career_goals": "any stated career goals or aspirations, or null",
@@ -126,7 +126,7 @@ def is_valid_pdf(data: bytes) -> bool:
 
 
 def _ensure_str_list(value: object) -> list[str]:
-    """Coerce LLM output to list[str], handling cases where a string is returned instead of a list."""
+    """Coerce LLM output to list[str], handling string-instead-of-list cases."""
     if isinstance(value, list):
         return [str(item) for item in value]
     if isinstance(value, str) and value:
