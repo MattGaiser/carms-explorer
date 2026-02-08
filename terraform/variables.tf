@@ -17,9 +17,9 @@ variable "environment" {
 }
 
 variable "instance_type" {
-  description = "EC2 instance type (t3.small = 2GB RAM ~$15/mo, t3.micro = free tier)"
+  description = "EC2 instance type (t3.micro = 1GB RAM, free tier eligible)"
   type        = string
-  default     = "t3.small"
+  default     = "t3.micro"
 }
 
 variable "ssh_public_key" {

@@ -8,11 +8,12 @@ terraform {
     }
   }
 
-  backend "s3" {
-    bucket = "carms-explorer-tfstate"
-    key    = "terraform.tfstate"
-    region = "ca-central-1"
-  }
+  # Using local state — create S3 bucket and uncomment for remote state:
+  # backend "s3" {
+  #   bucket = "carms-explorer-tfstate"
+  #   key    = "terraform.tfstate"
+  #   region = "ca-central-1"
+  # }
 }
 
 provider "aws" {
