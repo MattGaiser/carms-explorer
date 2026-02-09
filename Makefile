@@ -53,7 +53,7 @@ dashboard:
 report:
 	quarto render reports/program_landscape.qmd --to html
 
-# Terraform (EC2 deployment)
+# Terraform (GCE deployment)
 deploy-init:
 	cd terraform && terraform init
 

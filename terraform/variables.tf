@@ -1,7 +1,19 @@
-variable "aws_region" {
-  description = "AWS region"
+variable "gcp_project" {
+  description = "GCP project ID"
   type        = string
-  default     = "ca-central-1"
+  default     = "aiproductproject"
+}
+
+variable "gcp_region" {
+  description = "GCP region (us-central1/us-west1/us-east1 for free tier)"
+  type        = string
+  default     = "us-central1"
+}
+
+variable "gcp_zone" {
+  description = "GCP zone"
+  type        = string
+  default     = "us-central1-a"
 }
 
 variable "project_name" {
@@ -10,25 +22,19 @@ variable "project_name" {
   default     = "carms-explorer"
 }
 
-variable "environment" {
-  description = "Deployment environment"
+variable "machine_type" {
+  description = "GCE machine type (e2-micro = free tier)"
   type        = string
-  default     = "prod"
-}
-
-variable "instance_type" {
-  description = "EC2 instance type (t3.micro = 1GB RAM, free tier eligible)"
-  type        = string
-  default     = "t3.micro"
+  default     = "e2-micro"
 }
 
 variable "ssh_public_key" {
-  description = "SSH public key for EC2 access"
+  description = "SSH public key for instance access"
   type        = string
 }
 
-variable "allowed_ssh_cidr" {
-  description = "CIDR block allowed to SSH (restrict in production)"
+variable "ssh_user" {
+  description = "SSH username (derived from key comment)"
   type        = string
-  default     = "0.0.0.0/0"
+  default     = "carms-deploy"
 }

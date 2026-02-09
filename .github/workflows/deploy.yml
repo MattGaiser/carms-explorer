@@ -68,17 +68,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Copy files to EC2
+      - name: Copy files to server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ec2-user
+          username: carms-deploy
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           source: "docker/docker-compose.prod.yml,docker/init-db.sql,docker/dagster_workspace.yaml"
-          target: /home/ec2-user/carms
+          target: /home/carms-deploy/carms
           strip_components: 1
 
-      - name: Deploy to EC2
+      - name: Deploy to server
         uses: appleboy/ssh-action@v1.2.0
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -87,19 +87,17 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ec2-user
+          username: carms-deploy
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           envs: GITHUB_REPOSITORY,IMAGE_TAG,POSTGRES_PASSWORD,ANTHROPIC_API_KEY
           script: |
-            cd /home/ec2-user/carms
+            cd /home/carms-deploy/carms
 
             # Write .env for docker compose (GHCR requires lowercase repo names)
             REPO_LC=$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
             printf 'GITHUB_REPOSITORY=%s\nIMAGE_TAG=%s\nPOSTGRES_PASSWORD=%s\nANTHROPIC_API_KEY=%s\n' \
               "${REPO_LC}" "${IMAGE_TAG}" "${POSTGRES_PASSWORD}" "${ANTHROPIC_API_KEY}" > .env
 
-            # Pull images (public GHCR repo — no login needed)
-            # For private repos, add GHCR_PAT secret and: echo "$GHCR_PAT" | docker login ghcr.io -u USERNAME --password-stdin
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d
             docker image prune -f
