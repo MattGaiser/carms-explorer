@@ -75,18 +75,18 @@ def program_embeddings(
                     }
                 )
 
-            # Embed and insert in batches
+            # Embed and insert in batches, committing each to free memory
             if len(chunk_buffer) >= batch_size:
                 _embed_and_insert(session, embeddings, chunk_buffer, context)
                 total_chunks += len(chunk_buffer)
+                session.commit()
                 chunk_buffer = []
 
         # Final batch
         if chunk_buffer:
             _embed_and_insert(session, embeddings, chunk_buffer, context)
             total_chunks += len(chunk_buffer)
-
-        session.commit()
+            session.commit()
 
     context.log.info(f"Created {total_chunks} embedding chunks")
     return total_chunks
