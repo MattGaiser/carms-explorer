@@ -8,7 +8,8 @@ from carms.etl import assets
 from carms.etl.resources import DatabaseResource, EmbeddingResource
 
 database_url = os.environ.get("DATABASE_URL", "postgresql://carms:carms@localhost:5432/carms")
-embedding_model = os.environ.get("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+embedding_model = os.environ.get("EMBEDDING_MODEL", "text-embedding-3-small")
+openai_api_key = os.environ.get("OPENAI_API_KEY", "")
 
 all_assets = load_assets_from_package_module(assets)
 
@@ -23,6 +24,6 @@ defs = Definitions(
     jobs=[full_refresh_job],
     resources={
         "database": DatabaseResource(database_url=database_url),
-        "embeddings": EmbeddingResource(model_name=embedding_model),
+        "embeddings": EmbeddingResource(model_name=embedding_model, openai_api_key=openai_api_key),
     },
 )

@@ -85,18 +85,19 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: carms-deploy
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-          envs: GITHUB_REPOSITORY,IMAGE_TAG,POSTGRES_PASSWORD,ANTHROPIC_API_KEY
+          envs: GITHUB_REPOSITORY,IMAGE_TAG,POSTGRES_PASSWORD,ANTHROPIC_API_KEY,OPENAI_API_KEY
           script: |
             cd /home/carms-deploy/carms
 
             # Write .env for docker compose (GHCR requires lowercase repo names)
             REPO_LC=$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
-            printf 'GITHUB_REPOSITORY=%s\nIMAGE_TAG=%s\nPOSTGRES_PASSWORD=%s\nANTHROPIC_API_KEY=%s\n' \
-              "${REPO_LC}" "${IMAGE_TAG}" "${POSTGRES_PASSWORD}" "${ANTHROPIC_API_KEY}" > .env
+            printf 'GITHUB_REPOSITORY=%s\nIMAGE_TAG=%s\nPOSTGRES_PASSWORD=%s\nANTHROPIC_API_KEY=%s\nOPENAI_API_KEY=%s\n' \
+              "${REPO_LC}" "${IMAGE_TAG}" "${POSTGRES_PASSWORD}" "${ANTHROPIC_API_KEY}" "${OPENAI_API_KEY}" > .env
 
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d

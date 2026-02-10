@@ -83,7 +83,7 @@ class ProgramEmbedding(SQLModel, table=True):
     chunk_text: str
     embedding: list[float] | None = Field(
         default=None,
-        sa_column=Column(Vector(384)),
+        sa_column=Column(Vector(1536)),
     )
 
     program: Program | None = Relationship(back_populates="embeddings")

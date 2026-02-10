@@ -17,8 +17,8 @@ def sample_embedding(session, sample_program):
     session.add(desc)
     session.flush()
 
-    # 384-dim zero vector (valid for pgvector)
-    zero_vector = [0.0] * 384
+    # 1536-dim zero vector (OpenAI text-embedding-3-small dimensions)
+    zero_vector = [0.0] * 1536
     emb = ProgramEmbedding(
         program_id=sample_program.id,
         description_id=desc.id,

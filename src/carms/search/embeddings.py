@@ -2,19 +2,21 @@
 
 from functools import lru_cache
 
-from sentence_transformers import SentenceTransformer
+from langchain_openai import OpenAIEmbeddings
 
 from carms.config import settings
 
 
 @lru_cache(maxsize=1)
-def get_embedding_model() -> SentenceTransformer:
-    """Load and cache the sentence transformer model."""
-    return SentenceTransformer(settings.embedding_model)
+def get_embedding_model() -> OpenAIEmbeddings:
+    """Load and cache the OpenAI embedding model."""
+    return OpenAIEmbeddings(
+        model=settings.embedding_model,
+        openai_api_key=settings.openai_api_key,
+    )
 
 
 def embed_query(query: str) -> list[float]:
     """Embed a single query string."""
     model = get_embedding_model()
-    vector = model.encode(query, normalize_embeddings=True)
-    return vector.tolist()
+    return model.embed_query(query)

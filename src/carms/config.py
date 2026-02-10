@@ -10,9 +10,10 @@ class Settings(BaseSettings):
     database_url: str = "postgresql://carms:carms@localhost:5432/carms"
     dagster_database_url: str = "postgresql://carms:carms@localhost:5432/dagster"
 
-    # Embeddings
-    embedding_model: str = "all-MiniLM-L6-v2"
-    embedding_dim: int = 384
+    # Embeddings (OpenAI)
+    embedding_model: str = "text-embedding-3-small"
+    embedding_dim: int = 1536
+    openai_api_key: str | None = None
     chunk_size: int = 512
     chunk_overlap: int = 64
 

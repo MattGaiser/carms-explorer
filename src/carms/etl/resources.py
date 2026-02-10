@@ -1,7 +1,7 @@
 """Dagster resources for database and embedding operations."""
 
 from dagster import ConfigurableResource
-from sentence_transformers import SentenceTransformer
+from langchain_openai import OpenAIEmbeddings
 from sqlalchemy import create_engine
 from sqlmodel import Session
 
@@ -19,18 +19,25 @@ class DatabaseResource(ConfigurableResource):
 
 
 class EmbeddingResource(ConfigurableResource):
-    """Sentence embedding resource using all-MiniLM-L6-v2."""
+    """OpenAI embedding resource using text-embedding-3-small."""
 
-    model_name: str = "all-MiniLM-L6-v2"
+    model_name: str = "text-embedding-3-small"
+    openai_api_key: str = ""
 
-    _model: SentenceTransformer | None = None
+    _model: OpenAIEmbeddings | None = None
 
-    def _get_model(self) -> SentenceTransformer:
+    def _get_model(self) -> OpenAIEmbeddings:
         if self._model is None:
-            object.__setattr__(self, "_model", SentenceTransformer(self.model_name))
+            object.__setattr__(
+                self,
+                "_model",
+                OpenAIEmbeddings(
+                    model=self.model_name,
+                    openai_api_key=self.openai_api_key,
+                ),
+            )
         return self._model  # type: ignore[return-value]
 
     def embed(self, texts: list[str]) -> list[list[float]]:
         model = self._get_model()
-        embeddings = model.encode(texts, show_progress_bar=True, normalize_embeddings=True)
-        return embeddings.tolist()
+        return model.embed_documents(texts)

@@ -25,6 +25,7 @@ services:
     environment:
       DATABASE_URL: postgresql://carms:${POSTGRES_PASSWORD}@postgres:5432/carms
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       DATA_DIR: data/raw
     depends_on:
       postgres:
@@ -36,6 +37,7 @@ services:
     command: dagster api grpc -h 0.0.0.0 -p 4000 -m carms.etl.definitions
     environment:
       DATABASE_URL: postgresql://carms:${POSTGRES_PASSWORD}@postgres:5432/carms
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       DAGSTER_PG_HOST: postgres
       DAGSTER_PG_PORT: "5432"
       DAGSTER_PG_USER: carms

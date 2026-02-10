@@ -24,7 +24,7 @@ api = [
     "uvicorn[standard]>=0.32",
     "sse-starlette>=2.0",
     "httpx>=0.27",
-    "sentence-transformers>=3.0",
+    "langchain-openai>=0.3",
     "pandas>=2.2",
 ]
 dagster = [
@@ -34,7 +34,7 @@ dagster = [
     "openpyxl>=3.1",
     "pandas>=2.2",
     "langchain-text-splitters>=0.3",
-    "sentence-transformers>=3.0",
+    "langchain-openai>=0.3",
 ]
 rag = [
     "langchain>=0.3",
