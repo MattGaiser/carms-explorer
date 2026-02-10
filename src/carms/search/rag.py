@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
-from langchain.schema import BaseRetriever, Document
 from langchain_anthropic import ChatAnthropic
+from langchain_classic.chains import RetrievalQA
+from langchain_core.documents import Document
+from langchain_core.prompts import PromptTemplate
+from langchain_core.retrievers import BaseRetriever
 from pydantic import Field
 from sqlmodel import Session
 
