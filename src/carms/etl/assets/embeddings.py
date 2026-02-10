@@ -64,23 +64,26 @@ def program_embeddings(
             program_count += 1
             chunks = splitter.split_text(markdown)
             for i, chunk_text in enumerate(chunks):
-                chunk_buffer.append({
-                    "program_id": program_id,
-                    "description_id": desc_id,
-                    "chunk_index": i,
-                    "chunk_text": chunk_text,
-                })
+                chunk_buffer.append(
+                    {
+                        "program_id": program_id,
+                        "description_id": desc_id,
+                        "chunk_index": i,
+                        "chunk_text": chunk_text,
+                    }
+                )
 
             # Embed and commit when buffer is large enough
             if len(chunk_buffer) >= EMBED_BATCH_SIZE:
                 _embed_and_insert(
-                    session, embeddings, chunk_buffer, context,
+                    session,
+                    embeddings,
+                    chunk_buffer,
+                    context,
                 )
                 total_chunks += len(chunk_buffer)
                 session.commit()
-                context.log.info(
-                    f"Programs: {program_count}, chunks: {total_chunks}"
-                )
+                context.log.info(f"Programs: {program_count}, chunks: {total_chunks}")
                 chunk_buffer = []
 
         # Final batch
