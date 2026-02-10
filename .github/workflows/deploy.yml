@@ -105,5 +105,5 @@ jobs:
       - name: Health check
         run: |
           echo "Waiting for app to start..."
-          sleep 30
-          curl -f --retry 5 --retry-delay 10 http://${{ secrets.EC2_HOST }}:8000/health
+          sleep 60
+          curl -f --retry 10 --retry-delay 15 --retry-all-errors http://${{ secrets.EC2_HOST }}:8000/health
