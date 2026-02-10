@@ -1,6 +1,7 @@
 """Test configuration and fixtures."""
 
 import os
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy import create_engine, text
@@ -74,6 +75,17 @@ def sample_program(session, sample_discipline, sample_school):
     session.add(prog)
     session.flush()
     return prog
+
+
+@pytest.fixture(autouse=True)
+def mock_embed_query():
+    """Mock embed_query to avoid needing OpenAI API key in tests."""
+    fake_vector = [0.1] * 1536
+    with (
+        patch("carms.search.embeddings.embed_query", return_value=fake_vector),
+        patch("carms.search.retriever.embed_query", return_value=fake_vector),
+    ):
+        yield
 
 
 @pytest.fixture
