@@ -1,17 +1,14 @@
 """Embedding generation asset - chunk descriptions and create vector embeddings."""
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
 from dagster import AssetExecutionContext, AssetIn, asset
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sqlalchemy import text
-from sqlmodel import Session, SQLModel
+from sqlmodel import SQLModel
 
 from carms.db.models import ProgramEmbedding
 from carms.etl.resources import DatabaseResource, EmbeddingResource
 
-BATCH_SIZE = 500
-MAX_WORKERS = 2
+EMBED_BATCH_SIZE = 500
 
 
 @asset(
@@ -29,7 +26,6 @@ def program_embeddings(
     engine = database.get_engine()
     SQLModel.metadata.create_all(engine, tables=[ProgramEmbedding.__table__])
 
-    # Create HNSW index if not exists
     with engine.connect() as conn:
         conn.execute(
             text("""
@@ -48,71 +44,72 @@ def program_embeddings(
     )
 
     with database.get_session() as session:
-        # Clear existing embeddings
         session.execute(text("DELETE FROM program_embeddings"))
         session.commit()
 
-        # Load all descriptions with full markdown
-        rows = session.execute(
+        # Stream rows one at a time to avoid loading all markdown into memory
+        result = session.execute(
             text("""
                 SELECT pd.id, pd.program_id, pd.full_markdown
                 FROM program_descriptions pd
                 WHERE pd.full_markdown IS NOT NULL
             """)
-        ).fetchall()
+        )
 
-        context.log.info(f"Processing {len(rows)} descriptions for embedding")
+        total_chunks = 0
+        chunk_buffer: list[dict] = []
+        program_count = 0
 
-    # Chunk all descriptions up front
-    all_chunks: list[dict] = []
-    for desc_id, program_id, markdown in rows:
-        chunks = splitter.split_text(markdown)
-        for i, chunk_text in enumerate(chunks):
-            all_chunks.append(
-                {
+        for desc_id, program_id, markdown in result:
+            program_count += 1
+            chunks = splitter.split_text(markdown)
+            for i, chunk_text in enumerate(chunks):
+                chunk_buffer.append({
                     "program_id": program_id,
                     "description_id": desc_id,
                     "chunk_index": i,
                     "chunk_text": chunk_text,
-                }
-            )
+                })
 
-    n = len(all_chunks)
-    context.log.info(f"{n} chunks total, batch_size={BATCH_SIZE}, workers={MAX_WORKERS}")
-
-    # Split into batches
-    batches = [all_chunks[i : i + BATCH_SIZE] for i in range(0, len(all_chunks), BATCH_SIZE)]
-
-    # Embed batches concurrently, insert+commit each with its own session
-    total_chunks = 0
-
-    def _process_batch(batch: list[dict]) -> int:
-        """Embed a batch and insert into DB with a dedicated session."""
-        texts = [c["chunk_text"] for c in batch]
-        vectors = embeddings.embed(texts)
-
-        with Session(engine) as sess:
-            for chunk, vector in zip(batch, vectors):
-                sess.add(
-                    ProgramEmbedding(
-                        program_id=chunk["program_id"],
-                        description_id=chunk["description_id"],
-                        chunk_index=chunk["chunk_index"],
-                        chunk_text=chunk["chunk_text"],
-                        embedding=vector,
-                    )
+            # Embed and commit when buffer is large enough
+            if len(chunk_buffer) >= EMBED_BATCH_SIZE:
+                _embed_and_insert(
+                    session, embeddings, chunk_buffer, context,
                 )
-            sess.commit()
-        return len(batch)
+                total_chunks += len(chunk_buffer)
+                session.commit()
+                context.log.info(
+                    f"Programs: {program_count}, chunks: {total_chunks}"
+                )
+                chunk_buffer = []
 
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        futures = {executor.submit(_process_batch, batch): i for i, batch in enumerate(batches)}
-        for future in as_completed(futures):
-            batch_idx = futures[future]
-            count = future.result()
-            total_chunks += count
-            done = f"{total_chunks}/{n}"
-            context.log.info(f"Batch {batch_idx + 1}/{len(batches)}: {count} chunks ({done})")
+        # Final batch
+        if chunk_buffer:
+            _embed_and_insert(session, embeddings, chunk_buffer, context)
+            total_chunks += len(chunk_buffer)
+            session.commit()
 
-    context.log.info(f"Created {total_chunks} embedding chunks")
+    context.log.info(f"Done: {total_chunks} chunks from {program_count} programs")
     return total_chunks
+
+
+def _embed_and_insert(
+    session,
+    embedding_resource: EmbeddingResource,
+    chunks: list[dict],
+    context: AssetExecutionContext,
+) -> None:
+    """Embed a batch of chunks and insert into database."""
+    texts = [c["chunk_text"] for c in chunks]
+    vectors = embedding_resource.embed(texts)
+
+    for chunk, vector in zip(chunks, vectors):
+        session.add(
+            ProgramEmbedding(
+                program_id=chunk["program_id"],
+                description_id=chunk["description_id"],
+                chunk_index=chunk["chunk_index"],
+                chunk_text=chunk["chunk_text"],
+                embedding=vector,
+            )
+        )
