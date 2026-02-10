@@ -77,7 +77,8 @@ def program_embeddings(
                 }
             )
 
-    context.log.info(f"Created {len(all_chunks)} chunks, embedding in batches of {BATCH_SIZE} with {MAX_WORKERS} workers")
+    n = len(all_chunks)
+    context.log.info(f"{n} chunks total, batch_size={BATCH_SIZE}, workers={MAX_WORKERS}")
 
     # Split into batches
     batches = [all_chunks[i : i + BATCH_SIZE] for i in range(0, len(all_chunks), BATCH_SIZE)]
@@ -110,7 +111,8 @@ def program_embeddings(
             batch_idx = futures[future]
             count = future.result()
             total_chunks += count
-            context.log.info(f"Batch {batch_idx + 1}/{len(batches)}: embedded {count} chunks ({total_chunks}/{len(all_chunks)} total)")
+            done = f"{total_chunks}/{n}"
+            context.log.info(f"Batch {batch_idx + 1}/{len(batches)}: {count} chunks ({done})")
 
     context.log.info(f"Created {total_chunks} embedding chunks")
     return total_chunks
