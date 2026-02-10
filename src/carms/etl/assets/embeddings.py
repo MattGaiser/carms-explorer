@@ -11,7 +11,7 @@ from carms.db.models import ProgramEmbedding
 from carms.etl.resources import DatabaseResource, EmbeddingResource
 
 BATCH_SIZE = 500
-MAX_WORKERS = 4
+MAX_WORKERS = 2
 
 
 @asset(
