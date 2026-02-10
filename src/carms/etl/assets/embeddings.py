@@ -24,6 +24,12 @@ def program_embeddings(
 ) -> int:
     """Chunk program descriptions and generate embeddings."""
     engine = database.get_engine()
+
+    # Drop and recreate to pick up any schema changes (e.g. vector dimensions)
+    with engine.connect() as conn:
+        conn.execute(text("DROP TABLE IF EXISTS program_embeddings"))
+        conn.commit()
+
     SQLModel.metadata.create_all(engine, tables=[ProgramEmbedding.__table__])
 
     with engine.connect() as conn:
@@ -44,9 +50,6 @@ def program_embeddings(
     )
 
     with database.get_session() as session:
-        session.execute(text("DELETE FROM program_embeddings"))
-        session.commit()
-
         # Stream rows one at a time to avoid loading all markdown into memory
         result = session.execute(
             text("""
