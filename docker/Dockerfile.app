@@ -16,7 +16,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
 RUN npm install -g @anthropic-ai/claude-code
 
 COPY pyproject.toml README.md ./
-RUN pip install --no-cache-dir ".[api,agent]"
+RUN pip install --no-cache-dir ".[api,agent,rag]"
 
 
 COPY src/ ./src/
