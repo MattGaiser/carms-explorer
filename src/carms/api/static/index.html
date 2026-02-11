@@ -13,7 +13,8 @@
             <p class="subtitle">AI-powered Canadian medical residency program discovery</p>
             <nav>
                 <a href="/docs" target="_blank">API Docs</a>
-                <a href="http://localhost:8501" target="_blank">Analytics Dashboard</a>
+                <a id="dashboard-link" href="http://localhost:8501" target="_blank">Analytics Dashboard</a>
+            <script>document.getElementById('dashboard-link').href = location.protocol + '//' + location.hostname + ':8501';</script>
             </nav>
         </header>
 
