@@ -18,9 +18,12 @@ RUN npm install -g @anthropic-ai/claude-code
 COPY pyproject.toml README.md ./
 RUN pip install --no-cache-dir ".[api,agent,rag]"
 
-
 COPY src/ ./src/
 COPY data/raw/ ./data/raw/
+
+# Create non-root user (Claude CLI refuses --dangerously-skip-permissions as root)
+RUN useradd -m appuser && chown -R appuser:appuser /app
+USER appuser
 
 ENV PYTHONPATH=/app/src
 EXPOSE 8000
